@@ -653,6 +653,14 @@
             color: var(--success);
         }
         
+        .notification.error {
+            border-left-color: var(--accent);
+        }
+        
+        .notification.error i {
+            color: var(--accent);
+        }
+        
         .pulse {
             animation: pulse 2s infinite;
         }
@@ -699,7 +707,7 @@
     <!-- Login/Register Section -->
     <div id="authSection" class="auth-container">
         <div class="auth-card">
-            <h2><i class="fas fa-wallet"></i> FinTrack Pro</h2>
+            <h2><i class="fas fa-wallet"></i> Faiz's Tracker Pro</h2>
             
             <div class="auth-tabs">
                 <div class="auth-tab active" id="loginTab">Login</div>
@@ -750,7 +758,7 @@
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-chart-line"></i>
-                    FinTrack Pro
+                    Faiz's Tracker Pro
                 </div>
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">U</div>
@@ -918,111 +926,115 @@
         // Initialize database
         const db = new Database();
         
-        // Check if user is already logged in
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (currentUser) {
-            // User is logged in, show main app
-            showMainApp(currentUser);
-        }
+        // Global variables
+        let transactions = [];
+        let pieChart, barChartInstance;
         
-        // DOM elements
-        const authSection = document.getElementById('authSection');
-        const mainApp = document.getElementById('mainApp');
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const loginTab = document.getElementById('loginTab');
-        const registerTab = document.getElementById('registerTab');
-        const transactionForm = document.getElementById('transactionForm');
-        const transactionsList = document.getElementById('transactionsList');
-        const totalBalance = document.getElementById('totalBalance');
-        const totalIncome = document.getElementById('totalIncome');
-        const totalExpenses = document.getElementById('totalExpenses');
-        const summaryBalance = document.getElementById('summaryBalance');
-        const expenseChart = document.getElementById('expenseChart');
-        const barChart = document.getElementById('barChart');
-        const notification = document.getElementById('notification');
-        const tabExpenses = document.getElementById('tab-expenses');
-        const tabTrends = document.getElementById('tab-trends');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const userAvatar = document.getElementById('userAvatar');
-        const userName = document.getElementById('userName');
+        // DOM elements - will be initialized after DOM is loaded
+        let authSection, mainApp, loginForm, registerForm, loginTab, registerTab;
+        let transactionForm, transactionsList, totalBalance, totalIncome, totalExpenses;
+        let summaryBalance, expenseChartCanvas, barChartCanvas, notification;
+        let tabExpenses, tabTrends, logoutBtn, userAvatar, userName;
         
         // Set today's date as default for the date input
-        document.getElementById('transactionDate').valueAsDate = new Date();
+        function setDefaultDate() {
+            const dateInput = document.getElementById('transactionDate');
+            if (dateInput) {
+                dateInput.valueAsDate = new Date();
+            }
+        }
         
         // Tab switching for auth forms
-        loginTab.addEventListener('click', function() {
-            loginTab.classList.add('active');
-            registerTab.classList.remove('active');
-            loginForm.classList.add('active');
-            registerForm.classList.remove('active');
-        });
-        
-        registerTab.addEventListener('click', function() {
-            registerTab.classList.add('active');
-            loginTab.classList.remove('active');
-            registerForm.classList.add('active');
-            loginForm.classList.remove('active');
-        });
+        function setupAuthTabs() {
+            if (!loginTab || !registerTab || !loginForm || !registerForm) return;
+            
+            loginTab.addEventListener('click', function() {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.classList.add('active');
+                registerForm.classList.remove('active');
+            });
+            
+            registerTab.addEventListener('click', function() {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerForm.classList.add('active');
+                loginForm.classList.remove('active');
+            });
+        }
         
         // Login form submission
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+        function setupLoginForm() {
+            if (!loginForm) return;
             
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            // Find user in database
-            const user = db.findUser(email, password);
-            
-            if (user) {
-                // Login successful
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                showMainApp(user);
-                showNotification('Login successful!', 'success');
-            } else {
-                // Login failed
-                showNotification('Invalid email or password', 'error');
-            }
-        });
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                
+                // Find user in database
+                const user = db.findUser(email, password);
+                
+                if (user) {
+                    // Login successful
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    showMainApp(user);
+                    showNotification('Login successful!', 'success');
+                } else {
+                    // Login failed
+                    showNotification('Invalid email or password', 'error');
+                }
+            });
+        }
         
         // Register form submission
-        registerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+        function setupRegisterForm() {
+            if (!registerForm) return;
             
-            const name = document.getElementById('registerName').value;
-            const phone = document.getElementById('registerPhone').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            // Add user to database
-            const result = db.addUser({ name, phone, email, password });
-            
-            if (result.success) {
-                // Registration successful, switch to login tab
-                loginTab.click();
-                document.getElementById('loginEmail').value = email;
-                showNotification('Registration successful! Please login.', 'success');
-            } else {
-                showNotification(result.message, 'error');
-            }
-        });
+            registerForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('registerName').value;
+                const phone = document.getElementById('registerPhone').value;
+                const email = document.getElementById('registerEmail').value;
+                const password = document.getElementById('registerPassword').value;
+                
+                // Add user to database
+                const result = db.addUser({ name, phone, email, password });
+                
+                if (result.success) {
+                    // Registration successful, switch to login tab
+                    loginTab.click();
+                    document.getElementById('loginEmail').value = email;
+                    showNotification('Registration successful! Please login.', 'success');
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            });
+        }
         
         // Logout functionality
-        logoutBtn.addEventListener('click', function() {
-            localStorage.removeItem('currentUser');
-            showAuthSection();
-            showNotification('Logged out successfully', 'success');
-        });
+        function setupLogoutButton() {
+            if (!logoutBtn) return;
+            
+            logoutBtn.addEventListener('click', function() {
+                localStorage.removeItem('currentUser');
+                showAuthSection();
+                showNotification('Logged out successfully', 'success');
+            });
+        }
         
         // Show main app
         function showMainApp(user) {
+            if (!authSection || !mainApp) return;
+            
             authSection.style.display = 'none';
             mainApp.style.display = 'block';
             
             // Update user info
-            userAvatar.textContent = user.name.charAt(0).toUpperCase();
-            userName.textContent = user.name;
+            if (userAvatar) userAvatar.textContent = user.name.charAt(0).toUpperCase();
+            if (userName) userName.textContent = user.name;
             
             // Load user's transactions
             transactions = db.getTransactions(user.id);
@@ -1031,166 +1043,180 @@
         
         // Show auth section
         function showAuthSection() {
+            if (!authSection || !mainApp) return;
+            
             authSection.style.display = 'flex';
             mainApp.style.display = 'none';
         }
         
         // Initialize Charts
-        let pieChart = new Chart(expenseChart, {
-            type: 'doughnut',
-            data: {
-                labels: [],
-                datasets: [{
-                    data: [],
-                    backgroundColor: [
-                        '#7c3aed', '#06d6a0', '#ff6b6b', '#f59e0b', '#8b5cf6',
-                        '#10b981', '#ef4444', '#f97316', '#6366f1', '#14b8a6'
-                    ],
-                    borderWidth: 0,
-                    hoverOffset: 20
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
+        function initCharts() {
+            if (!expenseChartCanvas || !barChartCanvas) return;
+            
+            pieChart = new Chart(expenseChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#7c3aed', '#06d6a0', '#ff6b6b', '#f59e0b', '#8b5cf6',
+                            '#10b981', '#ef4444', '#f97316', '#6366f1', '#14b8a6'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 20
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#f1f5f9',
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Expenses by Category',
                             color: '#f1f5f9',
                             font: {
-                                size: 14
+                                size: 16
                             }
                         }
                     },
-                    title: {
-                        display: true,
-                        text: 'Expenses by Category',
-                        color: '#f1f5f9',
-                        font: {
-                            size: 16
-                        }
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
                     }
-                },
-                animation: {
-                    animateScale: true,
-                    animateRotate: true
                 }
-            }
-        });
-        
-        let barChartInstance = new Chart(barChart, {
-            type: 'bar',
-            data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                datasets: [
-                    {
-                        label: 'Income',
-                        data: [],
-                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Expenses',
-                        data: [],
-                        backgroundColor: 'rgba(255, 107, 107, 0.7)',
-                        borderColor: 'rgba(255, 107, 107, 1)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: '#f1f5f9'
+            });
+            
+            barChartInstance = new Chart(barChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: [],
+                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Expenses',
+                            data: [],
+                            backgroundColor: 'rgba(255, 107, 107, 0.7)',
+                            borderColor: 'rgba(255, 107, 107, 1)',
+                            borderWidth: 1
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Monthly Income vs Expenses',
-                        color: '#f1f5f9',
-                        font: {
-                            size: 16
-                        }
-                    }
+                    ]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#f1f5f9'
+                            }
                         },
-                        ticks: {
-                            color: '#f1f5f9'
+                        title: {
+                            display: true,
+                            text: 'Monthly Income vs Expenses',
+                            color: '#f1f5f9',
+                            font: {
+                                size: 16
+                            }
                         }
                     },
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#f1f5f9'
+                            }
                         },
-                        ticks: {
-                            color: '#f1f5f9'
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#f1f5f9'
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
         
         // Tab switching functionality
-        tabExpenses.addEventListener('click', function() {
-            this.classList.add('active');
-            tabTrends.classList.remove('active');
-            expenseChart.style.display = 'block';
-            barChart.style.display = 'none';
-        });
-        
-        tabTrends.addEventListener('click', function() {
-            this.classList.add('active');
-            tabExpenses.classList.remove('active');
-            expenseChart.style.display = 'none';
-            barChart.style.display = 'block';
-        });
+        function setupChartTabs() {
+            if (!tabExpenses || !tabTrends) return;
+            
+            tabExpenses.addEventListener('click', function() {
+                this.classList.add('active');
+                tabTrends.classList.remove('active');
+                if (expenseChartCanvas) expenseChartCanvas.style.display = 'block';
+                if (barChartCanvas) barChartCanvas.style.display = 'none';
+            });
+            
+            tabTrends.addEventListener('click', function() {
+                this.classList.add('active');
+                tabExpenses.classList.remove('active');
+                if (expenseChartCanvas) expenseChartCanvas.style.display = 'none';
+                if (barChartCanvas) barChartCanvas.style.display = 'block';
+            });
+        }
         
         // Add transaction
-        transactionForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+        function setupTransactionForm() {
+            if (!transactionForm) return;
             
-            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-            if (!currentUser) {
-                showNotification('Please login to add transactions', 'error');
-                return;
-            }
-            
-            const transaction = {
-                id: Date.now(),
-                name: document.getElementById('transactionName').value,
-                amount: parseFloat(document.getElementById('transactionAmount').value),
-                type: document.getElementById('transactionType').value,
-                category: document.getElementById('transactionCategory').value,
-                date: document.getElementById('transactionDate').value
-            };
-            
-            // Get current user's transactions
-            let transactions = db.getTransactions(currentUser.id);
-            transactions.push(transaction);
-            
-            // Save transactions for the user
-            db.saveTransactions(currentUser.id, transactions);
-            
-            updateUI();
-            
-            // Show notification
-            showNotification('Transaction added successfully!', 'success');
-            
-            // Reset form
-            transactionForm.reset();
-            document.getElementById('transactionDate').valueAsDate = new Date();
-        });
+            transactionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                if (!currentUser) {
+                    showNotification('Please login to add transactions', 'error');
+                    return;
+                }
+                
+                const transaction = {
+                    id: Date.now(),
+                    name: document.getElementById('transactionName').value,
+                    amount: parseFloat(document.getElementById('transactionAmount').value),
+                    type: document.getElementById('transactionType').value,
+                    category: document.getElementById('transactionCategory').value,
+                    date: document.getElementById('transactionDate').value
+                };
+                
+                // Get current user's transactions
+                let transactions = db.getTransactions(currentUser.id);
+                transactions.push(transaction);
+                
+                // Save transactions for the user
+                db.saveTransactions(currentUser.id, transactions);
+                
+                updateUI();
+                
+                // Show notification
+                showNotification('Transaction added successfully!', 'success');
+                
+                // Reset form
+                transactionForm.reset();
+                setDefaultDate();
+            });
+        }
         
         // Delete transaction
         function deleteTransaction(id) {
@@ -1208,9 +1234,15 @@
         
         // Show notification
         function showNotification(message, type = 'success') {
+            if (!notification) return;
+            
             notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
-            notification.style.borderLeftColor = type === 'success' ? '#10b981' : '#ef4444';
-            notification.querySelector('i').style.color = type === 'success' ? '#10b981' : '#ef4444';
+            
+            if (type === 'error') {
+                notification.classList.add('error');
+            } else {
+                notification.classList.remove('error');
+            }
             
             notification.classList.add('show');
             setTimeout(() => {
@@ -1232,12 +1264,6 @@
             return new Date(dateString).toLocaleDateString(undefined, options);
         }
         
-        // Get month name from date
-        function getMonthName(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('default', { month: 'short' });
-        }
-        
         // Update UI
         function updateUI() {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
@@ -1247,15 +1273,17 @@
             const transactions = db.getTransactions(currentUser.id);
             
             // Clear transactions list
-            transactionsList.innerHTML = '';
-            
-            if (transactions.length === 0) {
-                transactionsList.innerHTML = `
-                    <div class="transaction-item" style="text-align: center; justify-content: center; background: none;">
-                        <i class="fas fa-receipt" style="font-size: 24px; margin-right: 10px;"></i>
-                        No transactions yet
-                    </div>
-                `;
+            if (transactionsList) {
+                transactionsList.innerHTML = '';
+                
+                if (transactions.length === 0) {
+                    transactionsList.innerHTML = `
+                        <div class="transaction-item" style="text-align: center; justify-content: center; background: none;">
+                            <i class="fas fa-receipt" style="font-size: 24px; margin-right: 10px;"></i>
+                            No transactions yet
+                        </div>
+                    `;
+                }
             }
             
             // Calculate totals
@@ -1294,35 +1322,37 @@
                     monthlyData.expense[month] += transaction.amount;
                 }
                 
-                const transactionEl = document.createElement('div');
-                transactionEl.classList.add('transaction-item');
-                
-                transactionEl.innerHTML = `
-                    <div class="transaction-info">
-                        <div class="transaction-name">${transaction.name}</div>
-                        <div class="transaction-category">${transaction.category}</div>
-                    </div>
-                    <div class="transaction-amount ${transaction.type}">
-                        ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
-                    </div>
-                    <div class="transaction-date">${formatDate(transaction.date)}</div>
-                    <div class="transaction-actions">
-                        <button onclick="deleteTransaction(${transaction.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                
-                transactionsList.appendChild(transactionEl);
+                if (transactionsList) {
+                    const transactionEl = document.createElement('div');
+                    transactionEl.classList.add('transaction-item');
+                    
+                    transactionEl.innerHTML = `
+                        <div class="transaction-info">
+                            <div class="transaction-name">${transaction.name}</div>
+                            <div class="transaction-category">${transaction.category}</div>
+                        </div>
+                        <div class="transaction-amount ${transaction.type}">
+                            ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
+                        </div>
+                        <div class="transaction-date">${formatDate(transaction.date)}</div>
+                        <div class="transaction-actions">
+                            <button onclick="deleteTransaction(${transaction.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    transactionsList.appendChild(transactionEl);
+                }
             });
             
             // Update summary cards
             const balance = incomeTotal - expensesTotal;
             
-            totalIncome.textContent = formatCurrency(incomeTotal);
-            totalExpenses.textContent = formatCurrency(expensesTotal);
-            totalBalance.textContent = formatCurrency(balance);
-            summaryBalance.textContent = formatCurrency(balance);
+            if (totalIncome) totalIncome.textContent = formatCurrency(incomeTotal);
+            if (totalExpenses) totalExpenses.textContent = formatCurrency(expensesTotal);
+            if (totalBalance) totalBalance.textContent = formatCurrency(balance);
+            if (summaryBalance) summaryBalance.textContent = formatCurrency(balance);
             
             // Update charts
             updatePieChart(expensesByCategory);
@@ -1331,6 +1361,8 @@
         
         // Update pie chart
         function updatePieChart(expensesByCategory) {
+            if (!pieChart) return;
+            
             const categories = Object.keys(expensesByCategory);
             const amounts = Object.values(expensesByCategory);
             
@@ -1341,9 +1373,63 @@
         
         // Update bar chart
         function updateBarChart(monthlyData) {
+            if (!barChartInstance) return;
+            
             barChartInstance.data.datasets[0].data = monthlyData.income;
             barChartInstance.data.datasets[1].data = monthlyData.expense;
             barChartInstance.update();
+        }
+        
+        // Initialize DOM elements
+        function initDOMElements() {
+            authSection = document.getElementById('authSection');
+            mainApp = document.getElementById('mainApp');
+            loginForm = document.getElementById('loginForm');
+            registerForm = document.getElementById('registerForm');
+            loginTab = document.getElementById('loginTab');
+            registerTab = document.getElementById('registerTab');
+            transactionForm = document.getElementById('transactionForm');
+            transactionsList = document.getElementById('transactionsList');
+            totalBalance = document.getElementById('totalBalance');
+            totalIncome = document.getElementById('totalIncome');
+            totalExpenses = document.getElementById('totalExpenses');
+            summaryBalance = document.getElementById('summaryBalance');
+            expenseChartCanvas = document.getElementById('expenseChart');
+            barChartCanvas = document.getElementById('barChart');
+            notification = document.getElementById('notification');
+            tabExpenses = document.getElementById('tab-expenses');
+            tabTrends = document.getElementById('tab-trends');
+            logoutBtn = document.getElementById('logoutBtn');
+            userAvatar = document.getElementById('userAvatar');
+            userName = document.getElementById('userName');
+        }
+        
+        // Initialize the app
+        function initApp() {
+            // Initialize DOM elements
+            initDOMElements();
+            
+            // Set up event listeners
+            setupAuthTabs();
+            setupLoginForm();
+            setupRegisterForm();
+            setupLogoutButton();
+            setupTransactionForm();
+            setupChartTabs();
+            
+            // Set default date
+            setDefaultDate();
+            
+            // Initialize charts
+            initCharts();
+            
+            // Check if user is logged in
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                showMainApp(currentUser);
+            } else {
+                showAuthSection();
+            }
         }
         
         // Add floating elements dynamically
@@ -1362,7 +1448,14 @@
             }
         }
         
-        addFloatingElements();
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+            addFloatingElements();
+        });
+        
+        // Make deleteTransaction function available globally
+        window.deleteTransaction = deleteTransaction;
     </script>
 </body>
 </html>
